@@ -152,11 +152,11 @@ describe("rateLimitRead middleware (60 req/min per IP)", () => {
     const headers = { "x-forwarded-for": ip };
 
     for (let i = 0; i < 60; i++) {
-      const res = await request(app).get("/test").set(headers);
+      const res = await (request(app).get("/test") as any).set(headers);
       expect(res.status).toBe(200);
     }
 
-    const res = await request(app).get("/test").set(headers);
+    const res = await (request(app).get("/test") as any).set(headers);
     expect(res.status).toBe(429);
     expect(res.headers["retry-after"]).toBeDefined();
     expect(res.body.code).toBe("RATE_LIMIT_EXCEEDED");
@@ -168,7 +168,7 @@ describe("rateLimitRead middleware (60 req/min per IP)", () => {
     const statuses: number[] = [];
 
     for (let i = 0; i < 70; i++) {
-      const res = await request(app).get("/test").set(headers);
+      const res = await (request(app).get("/test") as any).set(headers);
       statuses.push(res.status);
     }
 
@@ -180,21 +180,21 @@ describe("rateLimitRead middleware (60 req/min per IP)", () => {
 
   it("different IPs have independent counters", async () => {
     for (let i = 0; i < 60; i++) {
-      await request(app).get("/test").set({ "x-forwarded-for": "10.1.0.1" });
+      await (request(app).get("/test") as any).set({ "x-forwarded-for": "10.1.0.1" });
     }
-    expect((await request(app).get("/test").set({ "x-forwarded-for": "10.1.0.1" })).status).toBe(
-      429
-    );
-    expect((await request(app).get("/test").set({ "x-forwarded-for": "10.1.0.2" })).status).toBe(
-      200
-    );
+    expect(
+      (await (request(app).get("/test") as any).set({ "x-forwarded-for": "10.1.0.1" })).status
+    ).toBe(429);
+    expect(
+      (await (request(app).get("/test") as any).set({ "x-forwarded-for": "10.1.0.2" })).status
+    ).toBe(200);
   }, 30_000);
 
   it("includes Retry-After header with a value in [1, 60] seconds", async () => {
     const headers = { "x-forwarded-for": "10.0.0.3" };
-    for (let i = 0; i < 60; i++) await request(app).get("/test").set(headers);
+    for (let i = 0; i < 60; i++) await (request(app).get("/test") as any).set(headers);
 
-    const res = await request(app).get("/test").set(headers);
+    const res = await (request(app).get("/test") as any).set(headers);
     expect(res.status).toBe(429);
     const retryAfter = parseInt(res.headers["retry-after"] as string, 10);
     expect(retryAfter).toBeGreaterThan(0);
@@ -224,37 +224,47 @@ describe("requireStellarAuth middleware", () => {
 
   it("accepts a request with a valid, fresh Stellar signature → 200", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now());
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(200);
-    expect(res.body.ok).toBe(true);
-    expect(res.body.address).toBe(kp.address);
+    expect((res.body as any).ok).toBe(true);
+    expect((res.body as any).address).toBe(kp.address);
   });
 
   it("attaches stellarAddress to request context on success", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now());
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
-    expect(res.body.address).toBe(kp.address);
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
+    expect((res.body as any).address).toBe(kp.address);
   });
 
   // ── Expired timestamp → 403 ────────────────────────────────────────────────
 
   it("rejects a 60-second-old timestamp → 403 EXPIRED_TIMESTAMP", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now() - 60_000);
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("EXPIRED_TIMESTAMP");
+    expect((res.body as any).code).toBe("EXPIRED_TIMESTAMP");
   });
 
   it("rejects a 31-second-old timestamp (tolerance is 30s) → 403", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now() - 31_000);
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("EXPIRED_TIMESTAMP");
+    expect((res.body as any).code).toBe("EXPIRED_TIMESTAMP");
   });
 
   it("accepts a timestamp within the 30s window → 200", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now() - 15_000);
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(200);
   });
 
@@ -270,9 +280,11 @@ describe("requireStellarAuth middleware", () => {
     const payload = JSON.stringify({ address: kp.address, timestamp: now, signature: badSig });
     const authHeader = `StellarSig ${Buffer.from(payload).toString("base64")}`;
 
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe("INVALID_SIGNATURE");
+    expect((res.body as any).code).toBe("INVALID_SIGNATURE");
   });
 
   it("rejects a garbage signature → 401 INVALID_SIGNATURE", async () => {
@@ -284,9 +296,11 @@ describe("requireStellarAuth middleware", () => {
     });
     const authHeader = `StellarSig ${Buffer.from(payload).toString("base64")}`;
 
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe("INVALID_SIGNATURE");
+    expect((res.body as any).code).toBe("INVALID_SIGNATURE");
   });
 
   // ── Missing / malformed header → 400 ─────────────────────────────────────
@@ -294,30 +308,33 @@ describe("requireStellarAuth middleware", () => {
   it("returns 400 when Authorization header is missing", async () => {
     const res = await request(app).post("/write").send({});
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_AUTH_HEADER");
-    expect(res.body.error).toBeDefined();
+    expect((res.body as any).code).toBe("INVALID_AUTH_HEADER");
+    expect((res.body as any).error).toBeDefined();
   });
 
   it("returns 400 for wrong scheme (Bearer)", async () => {
-    const res = await request(app).post("/write").set("Authorization", "Bearer sometoken").send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", "Bearer sometoken")
+      .send({});
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_AUTH_HEADER");
+    expect((res.body as any).code).toBe("INVALID_AUTH_HEADER");
   });
 
   it("returns 400 for invalid base64 in StellarSig payload", async () => {
-    const res = await request(app)
-      .post("/write")
+    const res = await (request(app).post("/write") as any)
       .set("Authorization", "StellarSig !!!not-base64!!!")
       .send({});
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("INVALID_AUTH_HEADER");
+    expect((res.body as any).code).toBe("INVALID_AUTH_HEADER");
   });
 
   it("returns 403 for a future timestamp (replay attack from future)", async () => {
     const authHeader = buildStellarAuthHeader(kp, Date.now() + 999_999);
-    const res = await request(app).post("/write").set("Authorization", authHeader).send({});
+    const res = await (request(app).post("/write") as any)
+      .set("Authorization", authHeader)
+      .send({});
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("INVALID_TIMESTAMP");
+    expect((res.body as any).code).toBe("INVALID_TIMESTAMP");
   });
 });
 

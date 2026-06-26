@@ -112,6 +112,48 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /feed/following:
+    get:
+      summary: Get chronologically ordered posts from followed accounts
+      operationId: getFollowingFeed
+      tags: [Feed]
+      parameters:
+        - name: viewer
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Viewer Stellar address.
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/after"
+      responses:
+        "200":
+          description: Paginated feed of posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /feed/explore:
+    get:
+      summary: Get hot-scored posts
+      operationId: getExploreFeed
+      tags: [Feed]
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/after"
+      responses:
+        "200":
+          description: Paginated feed of posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /pools/{id}:
     get:
       summary: Get pool by ID
@@ -162,6 +204,13 @@ components:
         minimum: 0
         default: 0
       description: Number of items to skip before returning results.
+    after:
+      name: after
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Keyset cursor to fetch the next page.
 
   schemas:
     Profile:
@@ -216,6 +265,42 @@ components:
           type: integer
         has_more:
           type: boolean
+
+    FeedPost:
+      type: object
+      required: [id, author, content, tip_total, like_count, created_at, cursor]
+      properties:
+        id:
+          type: string
+        author:
+          type: string
+        content:
+          type: string
+        tip_total:
+          type: string
+        like_count:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        cursor:
+          type: string
+
+    FeedList:
+      type: object
+      required: [posts, limit, has_more]
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeedPost"
+        limit:
+          type: integer
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+          nullable: true
 
     FollowerList:
       type: object

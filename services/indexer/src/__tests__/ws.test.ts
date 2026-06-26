@@ -87,9 +87,10 @@ describe("WebSocket fanout", () => {
     h.bus.publish(busEvent("PostCreated", 100));
 
     const { frame, at } = await received;
+    const f = frame as any;
     expect(at - sentAt).toBeLessThan(200);
-    expect(frame.type).toBe("PostCreated");
-    expect(frame.payload.ledgerSequence).toBe(100);
+    expect(f.type).toBe("PostCreated");
+    expect(f.payload.ledgerSequence).toBe(100);
 
     client.close();
   });

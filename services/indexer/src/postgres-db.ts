@@ -66,7 +66,7 @@ export class PostgresDatabase implements Database {
     offset: number
   ): Promise<{ followers: string[]; total: number }> {
     const totalRes = await this.pool.query(
-      `SELECT COUNT(*)::int AS total FROM follows WHERE followee = $1`,
+      `SELECT follower_count::int AS total FROM follow_counts WHERE address = $1`,
       [address]
     );
     const total = totalRes.rows[0]?.total ?? 0;
@@ -91,7 +91,7 @@ export class PostgresDatabase implements Database {
     offset: number
   ): Promise<{ following: string[]; total: number }> {
     const totalRes = await this.pool.query(
-      `SELECT COUNT(*)::int AS total FROM follows WHERE follower = $1`,
+      `SELECT following_count::int AS total FROM follow_counts WHERE address = $1`,
       [address]
     );
     const total = totalRes.rows[0]?.total ?? 0;

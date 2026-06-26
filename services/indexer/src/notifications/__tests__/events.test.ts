@@ -41,7 +41,7 @@ describe("notification event projector", () => {
 
     const callLog: string[] = [];
     const pool = {
-      query: jest.fn(async (_sql: string, _params?: unknown[]) => {
+      query: jest.fn(async (sql: string, _params?: unknown[]) => {
         callLog.push(sql);
         if (sql.includes("sent_notifications") && sql.includes("SELECT")) {
           return { rows: [] };

@@ -32,6 +32,7 @@ import { NotificationService, PostgresDeviceTokenStore } from "./notifications/s
 import { createApp } from "./api";
 import { createDomainProcessor } from "./domain-processor";
 import { PostgresDatabase } from "./postgres-db";
+import { createFeedRefreshJob } from "./api/routes/feed";
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[indexer] Received ${signal}, shutting down…`);
-  abortController.abort();
+  abortController.abort(); // Also stops feed refresh job via signal
   detachNotificationDispatcher();
   await wsHandle.close();
   httpServer.close();
@@ -198,6 +199,9 @@ async function main(): Promise<void> {
   httpServer.listen(PORT, () => {
     console.log(`[indexer] HTTP + WS listening on :${PORT} (ws path /ws)`);
   });
+
+  // Start background jobs
+  createFeedRefreshJob(pgPool, 60_000, abortController.signal);
 
   // Start gossip in the background.
   startGossip(pgPool, abortController.signal).catch((err) =>
